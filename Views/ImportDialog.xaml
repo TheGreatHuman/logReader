@@ -38,7 +38,7 @@
                   BorderBrush="{DynamicResource BorderBrush}"
                   Foreground="{DynamicResource ForegroundPrimaryBrush}">
             <GroupBox.Header>
-                <TextBlock Text="选择要导入的 CSV 文件" FontWeight="SemiBold"/>
+                <TextBlock Text="选择要导入的数据文件" FontWeight="SemiBold"/>
             </GroupBox.Header>
             <ListView x:Name="FileListView" 
                       Background="{DynamicResource BackgroundMediumBrush}"

@@ -47,6 +47,12 @@ public partial class MainViewModel : ObservableObject
     private DataRowView? _selectedTableRow;
 
     [ObservableProperty]
+    private ObservableCollection<OperationEvent> _operationEvents = [];
+
+    [ObservableProperty]
+    private OperationEvent? _selectedOperationEvent;
+
+    [ObservableProperty]
     private ThemeMode _themeMode;
 
     // ScottPlot WpfPlot reference (set from code-behind)
@@ -177,7 +183,7 @@ public partial class MainViewModel : ObservableObject
 
             if (csvFiles.Count == 0)
             {
-                StatusMessage = "ZIP 包中未发现 CSV 文件";
+                StatusMessage = "ZIP 包中未发现 CSV/XLSX 文件";
                 return;
             }
 
@@ -404,7 +410,11 @@ public partial class MainViewModel : ObservableObject
         if (_wpfPlot == null) return;
 
         var hasEvents = await _dynamicAccess.HasOpEventsTableAsync(logId);
-        if (!hasEvents) return;
+        if (!hasEvents)
+        {
+            OperationEvents = [];
+            return;
+        }
 
         var events = await _dynamicAccess.LoadOpEventsAsync(logId);
         var plot = _wpfPlot.Plot;
@@ -423,7 +433,7 @@ public partial class MainViewModel : ObservableObject
             vline.LegendText = "";
 
             var text = plot.Add.Text(
-                string.IsNullOrEmpty(evt.OperationType) ? evt.Message : evt.OperationType,
+                string.IsNullOrEmpty(evt.Result) ? evt.User : evt.Result,
                 new Coordinates(evt.TimestampMs, plot.Axes.GetLimits().Top));
             text.LabelFontColor = eventColor;
             text.LabelFontSize = 9;
@@ -431,6 +441,9 @@ public partial class MainViewModel : ObservableObject
         }
 
         _wpfPlot.Refresh();
+
+        // 填充操作事件集合供右侧面板和时间线使用
+        OperationEvents = new ObservableCollection<OperationEvent>(events);
     }
 
     private async Task LoadTableDataAsync(string logId, List<string> columns)
@@ -491,6 +504,19 @@ public partial class MainViewModel : ObservableObject
         ZoomToTimestamp(timestampMs);
     }
 
+    public void OnOperationEventSelected(OperationEvent evt)
+    {
+        ZoomToTimestamp(evt.TimestampMs);
+        OnChartClicked(evt.TimestampMs);
+    }
+
+    public (double Left, double Right) GetCurrentAxisLimits()
+    {
+        if (_wpfPlot == null) return (0, 0);
+        var limits = _wpfPlot.Plot.Axes.GetLimits();
+        return (limits.Left, limits.Right);
+    }
+
     public void ZoomToTimestamp(double timestampMs)
     {
         if (_wpfPlot == null) return;
@@ -523,6 +549,7 @@ public partial class MainViewModel : ObservableObject
         TableData = null;
         AvailableColumns.Clear();
         SelectedColumns.Clear();
+        OperationEvents = [];
         SelectedLogPackage = null;
     }
 }

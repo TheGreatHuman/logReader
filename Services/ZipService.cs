@@ -23,9 +23,11 @@ public class ZipService
     public List<CsvFileInfo> ScanCsvFiles(string folderPath)
     {
         var csvFiles = Directory.GetFiles(folderPath, "*.csv", SearchOption.AllDirectories);
+        var xlsxFiles = Directory.GetFiles(folderPath, "*.xlsx", SearchOption.AllDirectories);
+        var allFiles = csvFiles.Concat(xlsxFiles);
         var result = new List<CsvFileInfo>();
 
-        foreach (var filePath in csvFiles)
+        foreach (var filePath in allFiles)
         {
             var fileName = Path.GetFileName(filePath);
             var fileType = GuessFileType(fileName);

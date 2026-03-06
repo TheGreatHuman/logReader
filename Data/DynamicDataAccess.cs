@@ -55,8 +55,10 @@ public class DynamicDataAccess
             CREATE TABLE IF NOT EXISTS "OpEvents_{tableId}" (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 TimestampMs REAL NOT NULL,
-                OperationType TEXT,
-                Message TEXT
+                User TEXT,
+                Source TEXT,
+                Result TEXT,
+                Description TEXT
             );
             CREATE INDEX IF NOT EXISTS "IDX_OpTime_{tableId}" ON "OpEvents_{tableId}"(TimestampMs);
             """;
@@ -95,7 +97,8 @@ public class DynamicDataAccess
                 cmd.Parameters["@ts"].Value = row[0];
                 for (int i = 0; i < columnNames.Count; i++)
                 {
-                    cmd.Parameters[$"@p{i}"].Value = (i + 1 < row.Length) ? row[i + 1] : DBNull.Value;
+                    var v = (i + 1 < row.Length) ? row[i + 1] : double.NaN;
+                    cmd.Parameters[$"@p{i}"].Value = double.IsNaN(v) ? DBNull.Value : v;
                 }
                 await cmd.ExecuteNonQueryAsync();
             }
@@ -111,19 +114,23 @@ public class DynamicDataAccess
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
 
-        var sql = $"INSERT INTO \"OpEvents_{tableId}\" (TimestampMs, OperationType, Message) VALUES (@ts, @type, @msg);";
+        var sql = $"INSERT INTO \"OpEvents_{tableId}\" (TimestampMs, User, Source, Result, Description) VALUES (@ts, @user, @source, @result, @desc);";
 
         await using var transaction = conn.BeginTransaction();
         await using var cmd = new SqliteCommand(sql, conn, transaction);
         cmd.Parameters.Add(new SqliteParameter("@ts", SqliteType.Real));
-        cmd.Parameters.Add(new SqliteParameter("@type", SqliteType.Text));
-        cmd.Parameters.Add(new SqliteParameter("@msg", SqliteType.Text));
+        cmd.Parameters.Add(new SqliteParameter("@user", SqliteType.Text));
+        cmd.Parameters.Add(new SqliteParameter("@source", SqliteType.Text));
+        cmd.Parameters.Add(new SqliteParameter("@result", SqliteType.Text));
+        cmd.Parameters.Add(new SqliteParameter("@desc", SqliteType.Text));
 
         foreach (var evt in events)
         {
             cmd.Parameters["@ts"].Value = evt.TimestampMs;
-            cmd.Parameters["@type"].Value = evt.OperationType;
-            cmd.Parameters["@msg"].Value = evt.Message;
+            cmd.Parameters["@user"].Value = evt.User;
+            cmd.Parameters["@source"].Value = evt.Source;
+            cmd.Parameters["@result"].Value = evt.Result;
+            cmd.Parameters["@desc"].Value = evt.Description;
             await cmd.ExecuteNonQueryAsync();
         }
 
@@ -178,7 +185,7 @@ public class DynamicDataAccess
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
 
-        var sql = $"SELECT Id, TimestampMs, OperationType, Message FROM \"OpEvents_{tableId}\" ORDER BY TimestampMs;";
+        var sql = $"SELECT Id, TimestampMs, User, Source, Result, Description FROM \"OpEvents_{tableId}\" ORDER BY TimestampMs;";
         await using var cmd = new SqliteCommand(sql, conn);
         await using var reader = await cmd.ExecuteReaderAsync();
 
@@ -189,8 +196,10 @@ public class DynamicDataAccess
             {
                 Id = reader.GetInt64(0),
                 TimestampMs = reader.GetDouble(1),
-                OperationType = reader.IsDBNull(2) ? "" : reader.GetString(2),
-                Message = reader.IsDBNull(3) ? "" : reader.GetString(3)
+                User = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                Source = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                Result = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                Description = reader.IsDBNull(5) ? "" : reader.GetString(5)
             });
         }
 

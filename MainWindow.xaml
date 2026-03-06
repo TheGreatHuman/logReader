@@ -16,6 +16,8 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
         <converters:ThemeModeConverter x:Key="ThemeModeConverter"/>
+        <converters:TimestampToDateConverter x:Key="TimestampToDateConverter"/>
+        <converters:CountToVisibilityConverter x:Key="CountToVis"/>
     </Window.Resources>
 
     <Grid>
@@ -64,57 +66,55 @@
                         <ComboBoxItem Content="跟随系统"/>
                     </ComboBox>
 
-                    <TextBlock Text="数据列:" VerticalAlignment="Center" Margin="0,0,6,0"
-                               Foreground="{DynamicResource ForegroundSecondaryBrush}"/>
-                    <ItemsControl ItemsSource="{Binding AvailableColumns}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <ToggleButton Content="{Binding}" Margin="2" Padding="6,2"
-                                              FontSize="11"
-                                              IsChecked="{Binding DataContext.SelectedColumns, 
-                                                RelativeSource={RelativeSource AncestorType=Window},
-                                                Mode=OneWay,
-                                                Converter={x:Null}}"
-                                              Click="ColumnToggle_Click">
-                                    <ToggleButton.Style>
-                                        <Style TargetType="ToggleButton">
-                                            <Setter Property="Background" Value="{StaticResource BackgroundLightBrush}"/>
-                                            <Setter Property="Foreground" Value="{StaticResource ForegroundSecondaryBrush}"/>
-                                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-                                            <Setter Property="BorderThickness" Value="1"/>
-                                            <Setter Property="Cursor" Value="Hand"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="ToggleButton">
-                                                        <Border x:Name="bg" Background="{TemplateBinding Background}"
-                                                                BorderBrush="{TemplateBinding BorderBrush}"
-                                                                BorderThickness="{TemplateBinding BorderThickness}"
-                                                                CornerRadius="3" Padding="{TemplateBinding Padding}">
-                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsChecked" Value="True">
-                                                                <Setter TargetName="bg" Property="Background" Value="{StaticResource AccentBrush}"/>
-                                                                <Setter Property="Foreground" Value="#1E1E2E"/>
-                                                            </Trigger>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="bg" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </ToggleButton.Style>
-                                </ToggleButton>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <ToggleButton x:Name="ColumnConfigToggle" Margin="0,0,0,0" Padding="8,4"
+                                  ToolTip="配置显示的数据列"
+                                  Click="ColumnConfigToggle_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE71D;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="列配置" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <Popup x:Name="ColumnConfigPopup"
+                           PlacementTarget="{Binding ElementName=ColumnConfigToggle}"
+                           Placement="Bottom"
+                           StaysOpen="False"
+                           AllowsTransparency="True"
+                           Closed="ColumnConfigPopup_Closed">
+                        <Border Background="{DynamicResource BackgroundMediumBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Padding="8" Margin="4"
+                                MinWidth="200" MaxHeight="400">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="10" Opacity="0.3" ShadowDepth="3"/>
+                            </Border.Effect>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="选择显示的数据列"
+                                           FontWeight="SemiBold" FontSize="13"
+                                           Foreground="{DynamicResource ForegroundSecondaryBrush}"
+                                           Margin="4,2,4,8"/>
+                                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                                            HorizontalAlignment="Right" Margin="4,8,4,2">
+                                    <Button Content="全选" Click="ColumnSelectAll_Click"
+                                            Padding="8,3" Margin="0,0,6,0" FontSize="11"/>
+                                    <Button Content="全不选" Click="ColumnSelectNone_Click"
+                                            Padding="8,3" FontSize="11"/>
+                                </StackPanel>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              MaxHeight="300">
+                                    <ItemsControl ItemsSource="{Binding AvailableColumns}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox Content="{Binding}" Margin="4,3" FontSize="12"
+                                                          Click="ColumnCheckBox_Click"
+                                                          Loaded="ColumnCheckBox_Loaded"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+                    </Popup>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -127,6 +127,8 @@
                 <ColumnDefinition Width="*" MinWidth="300"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="300" MinWidth="150" MaxWidth="500"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="350" MinWidth="200" MaxWidth="600"/>
             </Grid.ColumnDefinitions>
 
             <!-- Left Panel: Log Package List -->
@@ -178,11 +180,17 @@
             <!-- Left Splitter -->
             <GridSplitter Grid.Column="1" Width="3" ResizeBehavior="PreviousAndNext"/>
 
-            <!-- Center Panel: Chart -->
+            <!-- Center Panel: Chart + Timeline -->
             <Border Grid.Column="2" Background="{DynamicResource BackgroundDarkBrush}">
                 <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
                     <!-- Empty state -->
-                    <TextBlock Text="导入日志包或从左侧列表选择一个日志包以开始分析"
+                    <TextBlock Grid.Row="0"
+                               Text="导入日志包或从左侧列表选择一个日志包以开始分析"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                FontSize="14" Foreground="{DynamicResource ForegroundSecondaryBrush}"
                                Visibility="{Binding SelectedLogPackage, 
@@ -191,8 +199,27 @@
 
                     <!-- ScottPlot Chart -->
                     <scottplot:WpfPlot x:Name="WpfPlot1"
+                                       Grid.Row="0"
                                        Margin="0"
                                        MouseDown="WpfPlot1_MouseDown"/>
+
+                    <!-- Operation Timeline -->
+                    <Border x:Name="TimelineBorder" Grid.Row="1"
+                            Height="50"
+                            Background="{DynamicResource BackgroundMediumBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0,1,0,0"
+                            Visibility="{Binding OperationEvents.Count,
+                                Converter={StaticResource CountToVis}}">
+                        <Grid>
+                            <Line X1="0" Y1="25"
+                                  X2="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Border}}"
+                                  Y2="25"
+                                  Stroke="{DynamicResource BorderBrush}"
+                                  StrokeThickness="1"/>
+                            <Canvas x:Name="TimelineCanvas" ClipToBounds="True"/>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Border>
 
@@ -221,6 +248,44 @@
                               VirtualizingPanel.VirtualizationMode="Recycling"
                               SelectionChanged="DataGridView_SelectionChanged"
                               Margin="4"/>
+                </DockPanel>
+            </Border>
+
+            <!-- Right Splitter 2 -->
+            <GridSplitter Grid.Column="5" Width="3" ResizeBehavior="PreviousAndNext"/>
+
+            <!-- Operation Log Panel -->
+            <Border Grid.Column="6" Background="{DynamicResource BackgroundMediumBrush}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="操作日志"
+                               FontWeight="SemiBold" FontSize="14"
+                               Margin="12,10,12,6"
+                               Foreground="{DynamicResource ForegroundSecondaryBrush}"/>
+
+                    <DataGrid x:Name="OperationLogGrid"
+                              ItemsSource="{Binding OperationEvents}"
+                              SelectedItem="{Binding SelectedOperationEvent}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserResizeRows="False"
+                              SelectionMode="Single"
+                              SelectionUnit="FullRow"
+                              EnableRowVirtualization="True"
+                              SelectionChanged="OperationLogGrid_SelectionChanged"
+                              Margin="4">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="时间" Width="140"
+                                Binding="{Binding FormattedTime}"/>
+                            <DataGridTextColumn Header="用户" Width="80"
+                                Binding="{Binding User}"/>
+                            <DataGridTextColumn Header="来源" Width="70"
+                                Binding="{Binding Source}"/>
+                            <DataGridTextColumn Header="操作" Width="100"
+                                Binding="{Binding Result}"/>
+                            <DataGridTextColumn Header="描述" Width="*"
+                                Binding="{Binding Description}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </DockPanel>
             </Border>
         </Grid>
