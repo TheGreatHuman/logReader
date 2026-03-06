@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using LogVision.Data;
 using LogVision.Models;
 using LogVision.Services;
+using LogVision.Views;
 using Microsoft.Win32;
 using ScottPlot;
 
@@ -241,9 +242,14 @@ public partial class MainViewModel : ObservableObject
     private async Task DeleteSelectedPackageAsync()
     {
         if (SelectedLogPackage == null) return;
+        await DeleteLogPackage(SelectedLogPackage);
+    }
 
+    [RelayCommand]
+    private async Task DeleteLogPackage(LogPackage package)
+    {
         var result = System.Windows.MessageBox.Show(
-            $"确定删除日志包 \"{SelectedLogPackage.Name}\"？\n此操作不可恢复。",
+            $"确定删除日志包 \"{package.Name}\"？\n此操作不可恢复。",
             "确认删除",
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Warning);
@@ -255,25 +261,19 @@ public partial class MainViewModel : ObservableObject
             IsBusy = true;
             StatusMessage = "正在删除...";
 
-            var id = SelectedLogPackage.Id;
-            var dataPath = SelectedLogPackage.DataFolderPath;
+            var id = package.Id;
+            var dataPath = package.DataFolderPath;
 
-            // 删除数据表
             await _dynamicAccess.DropTablesAsync(id);
-
-            // 删除元数据
             await _db.DeleteLogPackageAsync(id);
 
-            // 删除文件
             if (!string.IsNullOrEmpty(dataPath) && Directory.Exists(dataPath))
             {
                 try { Directory.Delete(dataPath, recursive: true); }
                 catch { /* best effort */ }
             }
 
-            // 清空当前显示
             ClearCurrentView();
-
             await LoadLogPackagesAsync();
             StatusMessage = "删除完成";
         }
@@ -284,6 +284,21 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task EditLogPackage(LogPackage package)
+    {
+        var dialog = new EditLogPackageDialog(package.Name, package.Description);
+        dialog.Owner = System.Windows.Application.Current.MainWindow;
+
+        if (dialog.ShowDialog() == true)
+        {
+            package.Name = dialog.EditedName;
+            package.Description = dialog.EditedDescription;
+            await _db.UpdateLogPackageAsync(package);
+            StatusMessage = "日志包信息已更新";
         }
     }
 
@@ -371,7 +386,6 @@ public partial class MainViewModel : ObservableObject
         plot.Clear();
         ConfigurePlotStyle();
 
-        plot.Axes.Bottom.Label.Text = "时间";
 
         // 自定义X轴刻度标签：将毫秒时间戳转为日期显示
         var tickGen = new ScottPlot.TickGenerators.NumericAutomatic

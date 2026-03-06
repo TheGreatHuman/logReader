@@ -149,14 +149,27 @@
                                Margin="12,10,12,6"
                                Foreground="{DynamicResource ForegroundSecondaryBrush}"/>
 
-                    <Button DockPanel.Dock="Bottom" Content="删除选中"
-                            Command="{Binding DeleteSelectedPackageCommand}"
-                            Margin="8,4,8,8" Padding="8,4"
-                            FontSize="11"/>
-
                     <ListBox ItemsSource="{Binding LogPackages}"
                              SelectedItem="{Binding SelectedLogPackage}"
                              Margin="4">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+                                <Setter Property="ContextMenu">
+                                    <Setter.Value>
+                                        <ContextMenu>
+                                            <MenuItem Header="编辑"
+                                                      Command="{Binding PlacementTarget.Tag.EditLogPackageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            <Separator/>
+                                            <MenuItem Header="删除"
+                                                      Command="{Binding PlacementTarget.Tag.DeleteLogPackageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                        </ContextMenu>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="4,4">
@@ -288,17 +301,18 @@
                     </DockPanel>
 
                     <!-- Card List -->
-                    <ListBox x:Name="OperationLogList"
-                             ItemsSource="{Binding OperationEvents}"
-                             SelectedItem="{Binding SelectedOperationEvent}"
-                             SelectionChanged="OperationLogList_SelectionChanged"
-                             HorizontalContentAlignment="Stretch"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             VirtualizingPanel.IsVirtualizing="True"
-                             VirtualizingPanel.VirtualizationMode="Recycling"
-                             BorderThickness="0"
-                             Margin="4,0,4,4">
-                        <ListBox.ItemTemplate>
+                    <ListView x:Name="OperationLogList"
+                              ItemsSource="{Binding OperationEvents}"
+                              SelectedItem="{Binding SelectedOperationEvent}"
+                              SelectionChanged="OperationLogList_SelectionChanged"
+                              HorizontalContentAlignment="Stretch"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              BorderThickness="0"
+                              Background="Transparent"
+                              Margin="4,0,4,4">
+                        <ListView.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="{DynamicResource BackgroundLightBrush}"
                                         CornerRadius="6" Padding="10,8" Margin="2,3">
@@ -337,8 +351,8 @@
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                        </ListView.ItemTemplate>
+                    </ListView>
                 </DockPanel>
             </Border>
         </Grid>
