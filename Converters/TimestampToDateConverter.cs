@@ -10,7 +10,7 @@ public class TimestampToDateConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is double ms && ms > 0)
-            return DateTime.FromOADate(ms / 86400000.0).ToString("yyyy/MM/dd HH:mm:ss");
+            return DateTime.FromOADate(ms / 86400000.0).ToString("yyyy/MM/dd HH:mm:ss.fff");
         return "";
     }
 

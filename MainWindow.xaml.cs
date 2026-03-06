@@ -69,9 +69,27 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OperationLogGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void DataGridView_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
     {
-        if (OperationLogGrid.SelectedItem is OperationEvent evt)
+        if (e.Column.Header.ToString() == "TimestampMs")
+        {
+            e.Column.Header = "时间";
+            var col = new DataGridTextColumn
+            {
+                Header = "时间",
+                Binding = new System.Windows.Data.Binding("TimestampMs")
+                {
+                    Converter = (System.Windows.Data.IValueConverter)Resources["TimestampToDateConverter"]
+                },
+                Width = 170
+            };
+            e.Column = col;
+        }
+    }
+
+    private void OperationLogList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (OperationLogList.SelectedItem is OperationEvent evt)
         {
             _viewModel.OnOperationEventSelected(evt);
 
@@ -84,6 +102,34 @@ public partial class MainWindow : Window
             // 同步更新时间线
             UpdateTimeline();
         }
+    }
+
+    private double _opLogColumnWidth = 350;
+
+    private void HideOpLogPanel_Click(object sender, RoutedEventArgs e)
+    {
+        // 记住当前宽度
+        var colDef = ((Grid)OpLogPanel.Parent).ColumnDefinitions[6];
+        _opLogColumnWidth = colDef.ActualWidth;
+
+        OpLogPanel.Visibility = Visibility.Collapsed;
+        OpLogSplitter.Visibility = Visibility.Collapsed;
+        colDef.Width = new GridLength(0);
+        colDef.MinWidth = 0;
+
+        ShowOpLogButton.Visibility = Visibility.Visible;
+    }
+
+    private void ShowOpLogPanel_Click(object sender, RoutedEventArgs e)
+    {
+        var colDef = ((Grid)OpLogPanel.Parent).ColumnDefinitions[6];
+        colDef.Width = new GridLength(_opLogColumnWidth);
+        colDef.MinWidth = 200;
+
+        OpLogPanel.Visibility = Visibility.Visible;
+        OpLogSplitter.Visibility = Visibility.Visible;
+
+        ShowOpLogButton.Visibility = Visibility.Collapsed;
     }
 
     private void UpdateTimeline()
@@ -138,7 +184,7 @@ public partial class MainWindow : Window
                 _viewModel.OnOperationEventSelected(capturedEvt);
                 if (_viewModel.SelectedTableRow != null)
                     DataGridView.ScrollIntoView(_viewModel.SelectedTableRow);
-                OperationLogGrid.ScrollIntoView(capturedEvt);
+                OperationLogList.ScrollIntoView(capturedEvt);
                 UpdateTimeline();
                 e.Handled = true;
             };

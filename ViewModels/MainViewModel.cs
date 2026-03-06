@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.IO;
@@ -372,6 +373,23 @@ public partial class MainViewModel : ObservableObject
 
         plot.Axes.Bottom.Label.Text = "时间";
 
+        // 自定义X轴刻度标签：将毫秒时间戳转为日期显示
+        var tickGen = new ScottPlot.TickGenerators.NumericAutomatic
+        {
+            LabelFormatter = value =>
+            {
+                try
+                {
+                    return DateTime.FromOADate(value / 86400000.0).ToString("yyyy/MM/dd\nHH:mm:ss.fff");
+                }
+                catch
+                {
+                    return value.ToString("F0");
+                }
+            }
+        };
+        plot.Axes.Bottom.TickGenerator = tickGen;
+
         bool isDark = App.ThemeService.EffectiveTheme == ThemeMode.Dark;
         var chartColors = GetCurrentChartColors();
 
@@ -407,8 +425,6 @@ public partial class MainViewModel : ObservableObject
 
     private async Task LoadOpEventsAsync(string logId)
     {
-        if (_wpfPlot == null) return;
-
         var hasEvents = await _dynamicAccess.HasOpEventsTableAsync(logId);
         if (!hasEvents)
         {
@@ -417,30 +433,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         var events = await _dynamicAccess.LoadOpEventsAsync(logId);
-        var plot = _wpfPlot.Plot;
-
-        bool isDark = App.ThemeService.EffectiveTheme == ThemeMode.Dark;
-        var eventColor = isDark
-            ? ScottPlot.Color.FromHex("#F38BA8")
-            : ScottPlot.Color.FromHex("#D32F2F");
-
-        foreach (var evt in events)
-        {
-            var vline = plot.Add.VerticalLine(evt.TimestampMs);
-            vline.Color = eventColor.WithAlpha(180);
-            vline.LineWidth = 1;
-            vline.LinePattern = LinePattern.Dashed;
-            vline.LegendText = "";
-
-            var text = plot.Add.Text(
-                string.IsNullOrEmpty(evt.Result) ? evt.User : evt.Result,
-                new Coordinates(evt.TimestampMs, plot.Axes.GetLimits().Top));
-            text.LabelFontColor = eventColor;
-            text.LabelFontSize = 9;
-            text.LabelRotation = -45;
-        }
-
-        _wpfPlot.Refresh();
 
         // 填充操作事件集合供右侧面板和时间线使用
         OperationEvents = new ObservableCollection<OperationEvent>(events);
